@@ -5,5 +5,6 @@ export default {
   // config options
   plugins: [
     glsl()
-  ]
+  ],
+  base: '/balloon-shooter/'
 }
