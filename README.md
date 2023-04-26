@@ -1,2 +1,2 @@
-# baloon-shooter
+# balloon-shooter
 Simple three.js game
