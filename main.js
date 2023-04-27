@@ -2,9 +2,6 @@ import * as THREE from 'three'
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import bgVertex from './shaders/bg/vertex.glsl'
 import bgFragment from './shaders/bg/fragment.glsl'
-import explosionVertexCommon from './shaders/explosion/vertexCommon.glsl'
-import explosionVertexBegin from './shaders/explosion/vertexBegin.glsl'
-import explosionFragment from './shaders/explosion/fragmentDiffuse.glsl'
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {pointerEventToNDCVector2} from "./utils/utils.js";
 import TouchCaster from "./utils/TouchCaster.js";
@@ -17,14 +14,15 @@ import Stats from "three/examples/jsm/libs/stats.module.js";
 import { gsap } from 'gsap';
 import { CustomEase } from "gsap/CustomEase";
 import ExplosionParticles from "./objects/ParticleExplosion.js";
+import {zzfx} from 'zzfx'
 
 gsap.registerPlugin(CustomEase)
 
 
 const canvas = document.querySelector('canvas.webgl')
 const score = document.querySelector('div.score')
+const button = document.querySelector("#button-start")
 
-console.log(score)
 const stats = new Stats();
 document.body.appendChild( stats.dom );
 
@@ -61,7 +59,9 @@ scene.add(targetGroup);
 
 let firstBalloon
 const makeFirstBalloon = () => {
-  firstBalloon = new TargetBalloon(new THREE.Vector3(0, -2, 0), targetGroup)
+  firstBalloon = new TargetBalloon(new THREE.Vector3(0, -3, 0), targetGroup)
+  firstBalloon.material.transparent = true;
+  firstBalloon.material.opacity = 0;
   
 }
 makeFirstBalloon()
@@ -107,6 +107,7 @@ const orbitControls = new OrbitControls( camera, canvas );
 orbitControls.enablePan = false;
 orbitControls.enableZoom = false;
 orbitControls.update();
+orbitControls.enabled = false;
 scene.add(camera)
 
 
@@ -119,6 +120,7 @@ const renderer = new THREE.WebGLRenderer({
 })
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
+// renderer.setClearAlpha(0.0);
 // renderer.render(scene, camera)
 
 /**
@@ -165,12 +167,12 @@ const newFrame = () => {
   for (const child of targetGroup.children) {
     if (child !== firstBalloon) {
       child.update2(elapsedTime - firstBalloonTime)
-    } else {
-      if (child.position.y < -0.001) {
-        child.position.y = (Math.sin(elapsedTime) - 1) * 3
-      } else {
-        child.position.y = 0
-      }
+    // } else {
+    //   if (child.position.y < -0.001) {
+    //     child.position.y = (Math.sin(elapsedTime) - 1) * 3
+    //   } else {
+    //     child.position.y = 0
+    //   }
     }
   }
   stats.end();
@@ -198,7 +200,11 @@ window.addEventListener('resize', () => {
   renderer.getPixelRatio(Math.min(window.devicePixelRatio, 3));
 })
 
-const touchCaster = new TouchCaster()
+/**
+ * Raycast on pointer event
+ * @type {TouchCaster}
+ */
+const touchCaster = new TouchCaster();
 
 window.addEventListener('pointerdown', (event) =>{
   const coords = pointerEventToNDCVector2(event, sizes)
@@ -213,15 +219,42 @@ const unTouchIfBalloon = (outline) => {
   }
 }
 
+
+window.onload = function() {
+  button.style.visibility = "visible";
+}
+button.onclick = () => {eventEmitter.e.emit(EVENTS.gameStart, {value: 'start'})}
+
+/**
+ * Events
+ * @type {EventEmitter}
+ */
 const eventEmitter = new EventEmitter()
+
+eventEmitter.e.on(EVENTS.gameStart, () => {
+  gsap.fromTo(firstBalloon.position,
+    { x:0,y:-3,z:0 },
+    { x: 0, y: 0, z: 0,
+      duration: 3,
+      // delay: 1,
+      ease: CustomEase.create("custom", "M0,0 C0.02,0.4 0.184,1.152 0.288,1.152 0.438,1.152 0.348,1 1,1 ")}
+  )
+  gsap.to(firstBalloon.material, {opacity: 1, duration: 1})
+  button.style.display = 'none';
+  score.style.visibility = "visible";
+  
+})
+
 eventEmitter.e.on(EVENTS.balloonFirstHit, (pLoad) => {
   unTouchIfBalloon(outlinePass)
   outlinePass.selectedObjects = [pLoad.payload]
+  zzfx(...[0,.2,500,.03,.04,.3,0,2,0,0,567,.02,0,0,0,0,0,1.2,0,.5]); // Loaded Sound 42
 })
 
 eventEmitter.e.on(EVENTS.balloonPop, (pLoad) => {
   particles.p.position.set(pLoad.payload.position.x, pLoad.payload.position.y, pLoad.payload.position.z)
   particles.explode()
+  zzfx(...[0,.2,440,0,.02,.5,4,1.15,-1,0,-100,.15,0,.7,0,.1]); // Loaded Sound 41
   if (pLoad.payload === firstBalloon) {
     firstBalloonTime = elapsedTime
     for (let i = 0; i < 10; i++) {

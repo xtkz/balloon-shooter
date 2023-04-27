@@ -16,6 +16,7 @@ export default class TargetBalloon extends THREE.Mesh {
     this.targetGroup.add(this)
     
     this.personalRandom = Math.sqrt(1-(Math.random()-1)**2)
+    
   }
   
     // this.position.set(
@@ -70,10 +71,7 @@ export default class TargetBalloon extends THREE.Mesh {
   
   update2(time) {
     if (this.position.y < 5) {
-      let newPosY = time * this.personalRandom - 5
-      // console.log(`§ delta position ${Math.round((newPosY - this.position.y) * 1000)}`)
-      
-      this.position.y  = newPosY
+      this.position.y  = time * this.personalRandom - 5
     } else {
       this.destruct()
     }

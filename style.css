@@ -16,7 +16,7 @@ body
     outline: none;
     width: 100vw;
     height: 100vh;
-    background-image: linear-gradient(aqua, wheat);
+    background-image: linear-gradient(#4F9BF0, #D8E9FC);
 }
 .webgl
 {
@@ -41,6 +41,21 @@ body
     line-height: 60px;
     font-family: monospace;
     touch-action: none;
-
+    visibility: hidden;
     user-select: none;
+}
+
+#button-start {
+    position: absolute;
+    left: calc(50% - 128px);
+    top: calc(60% - 32px);
+    width: 256px;
+    height: 64px;
+    background-color: #00000088;
+    color: white;
+    border: 2px solid white;
+    border-radius: 16px;
+    font-size: 32px;
+    font-family: monospace;
+    visibility: hidden;
 }

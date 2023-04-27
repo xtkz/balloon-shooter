@@ -13,7 +13,6 @@ export default class TouchCaster {
     if (intersects.length > 0) {
       intersects[0].object.getHit()
     } else {
-      console.log(`Nothing to hit`)
       this.eventEmitter.e.emit(EVENTS.hitMiss, {payload: null})
     }
   }

@@ -1,4 +1,5 @@
 export const EVENTS = {
+  gameStart: 'gameStart',
   balloonFirstHit: 'balloonFirstHit',
   hitMiss: 'hitMiss',
   balloonPop: 'balloonPop',
