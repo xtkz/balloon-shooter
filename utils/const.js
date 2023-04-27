@@ -6,5 +6,7 @@ export const EVENTS = {
 }
 
 export const SETTINGS = {
-  floatSpeed: 0.03,
+  floatSpeed: 0.02,
+  spreadRadius: 1,
+  particleScale: 0.1,
 }

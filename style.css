@@ -26,3 +26,21 @@ body
     outline: none;
     touch-action: none;
 }
+.score {
+    position: absolute;
+    right: 30px;
+    top: 30px;
+    width: 100px;
+    height: 60px;
+    background-color: #00000088;
+    color: white;
+    border: 2px solid white;
+    border-radius: 16px;
+    text-align: center;
+    font-size: 32px;
+    line-height: 60px;
+    font-family: monospace;
+    touch-action: none;
+
+    user-select: none;
+}

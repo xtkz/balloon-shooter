@@ -41,7 +41,6 @@ export default class TargetBalloon extends THREE.Mesh {
   
   getHit() {
     this.touches++
-    console.log(`§ TargetBalloon.touches ${this.touches}`)
     if (!this.allreadyTouched) {
       this.allreadyTouched = true;
     }
@@ -60,16 +59,21 @@ export default class TargetBalloon extends THREE.Mesh {
   }
   secondHit() {
     this.destruct()
-    this.eventEmitter.e.emit(EVENTS.balloonFirstHit, {payload: this})
+    this.eventEmitter.e.emit(EVENTS.balloonPop, {payload: this})
   }
   
   destruct() {
     this.targetGroup.remove(this)
+    this.geometry.dispose()
+    this.material.dispose()
   }
   
-  update2() {
-    if (this.position.y < 4) {
-      this.position.y += 0.04 * this.personalRandom
+  update2(time) {
+    if (this.position.y < 5) {
+      let newPosY = time * this.personalRandom - 5
+      // console.log(`§ delta position ${Math.round((newPosY - this.position.y) * 1000)}`)
+      
+      this.position.y  = newPosY
     } else {
       this.destruct()
     }

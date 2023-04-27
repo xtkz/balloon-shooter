@@ -2,6 +2,9 @@ import * as THREE from 'three'
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import bgVertex from './shaders/bg/vertex.glsl'
 import bgFragment from './shaders/bg/fragment.glsl'
+import explosionVertexCommon from './shaders/explosion/vertexCommon.glsl'
+import explosionVertexBegin from './shaders/explosion/vertexBegin.glsl'
+import explosionFragment from './shaders/explosion/fragmentDiffuse.glsl'
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {pointerEventToNDCVector2} from "./utils/utils.js";
 import TouchCaster from "./utils/TouchCaster.js";
@@ -9,7 +12,21 @@ import TargetBalloon from "./objects/TargetBalloon.js";
 import {RenderPass} from "three/examples/jsm/postprocessing/RenderPass.js";
 import {OutlinePass} from "three/addons/postprocessing/OutlinePass.js";
 import EventEmitter from "./utils/EventEmitter.js";
-import {EVENTS} from "./utils/const.js";
+import {EVENTS, SETTINGS} from "./utils/const.js";
+import Stats from "three/examples/jsm/libs/stats.module.js";
+import { gsap } from 'gsap';
+import { CustomEase } from "gsap/CustomEase";
+import ExplosionParticles from "./objects/ParticleExplosion.js";
+
+gsap.registerPlugin(CustomEase)
+
+
+const canvas = document.querySelector('canvas.webgl')
+const score = document.querySelector('div.score')
+
+console.log(score)
+const stats = new Stats();
+document.body.appendChild( stats.dom );
 
 const sizes = {
   width: window.innerWidth,
@@ -17,7 +34,7 @@ const sizes = {
 }
 
 const scene = new THREE.Scene()
-scene.add(new THREE.AxesHelper(3))
+// scene.add(new THREE.AxesHelper(3))
 
 /**
  * Lights
@@ -41,16 +58,22 @@ scene.add(targetGroup);
 /**
  * Test instance balloon
  */
-const spreadRadius = 1;
-for (let i = 0; i < 6; i++) {
-  const newX = (Math.random() * 2 - 1) * spreadRadius;
-  const newZ = (Math.random() * 2 - 1) * spreadRadius;
-  new TargetBalloon(new THREE.Vector3(newX, -5,newZ), targetGroup)
+
+let firstBalloon
+const makeFirstBalloon = () => {
+  firstBalloon = new TargetBalloon(new THREE.Vector3(0, -2, 0), targetGroup)
+  
 }
-// const balloon1 = new TargetBalloon(new THREE.Vector3(1, -5,1), targetGroup)
-// const balloon2 = new TargetBalloon(new THREE.Vector3(-1, -5,1), targetGroup)
-// const balloon3 = new TargetBalloon(new THREE.Vector3(1, -5,-1), targetGroup)
-// const balloon4 = new TargetBalloon(new THREE.Vector3(-1, -5,-1), targetGroup)
+makeFirstBalloon()
+
+
+/**
+ * Particles
+ */
+const particles = new ExplosionParticles()
+
+scene.add(particles.p)
+
 
 /**
  * 3D Background
@@ -73,8 +96,10 @@ const bg = new THREE.Mesh(
 // bg.scale.set(10,10,10)
 scene.add(bg)
 
-
-const canvas = document.querySelector('canvas.webgl')
+/**
+ * Camera
+ * @type {PerspectiveCamera}
+ */
 
 const camera = new THREE.PerspectiveCamera(75,sizes.width/sizes.height,0.01,20)
 camera.position.set(0,0,4)
@@ -107,7 +132,6 @@ const renderPass = new RenderPass(scene, camera);
 effectComposer.addPass(renderPass);
 
 const outlinePass = new OutlinePass( new THREE.Vector2(sizes.width, sizes.height), scene, camera );
-effectComposer.addPass(outlinePass);
 
 // Outline settings
 outlinePass.edgeThickness = 15;
@@ -116,25 +140,43 @@ outlinePass.edgeStrength = 2;
 outlinePass.visibleEdgeColor.set('#ffffff');
 outlinePass.hiddenEdgeColor.set('#190a05');
 
-outlinePass.selectedObjects = [bg]
+outlinePass.selectedObjects = []
 
+effectComposer.addPass(outlinePass);
 
 /**
  * Frame redraw loop
  */
+const clock = new THREE.Clock()
+let elapsedTime = 0;
+let firstBalloonTime = 0;
+
 const newFrame = () => {
+  stats.begin();
+  
+  //Time calculation
+  elapsedTime = clock.getElapsedTime()
   
   orbitControls.update();
   
   // Re-Render frame
   effectComposer.render(scene, camera)
   
+  for (const child of targetGroup.children) {
+    if (child !== firstBalloon) {
+      child.update2(elapsedTime - firstBalloonTime)
+    } else {
+      if (child.position.y < -0.001) {
+        child.position.y = (Math.sin(elapsedTime) - 1) * 3
+      } else {
+        child.position.y = 0
+      }
+    }
+  }
+  stats.end();
   // Make it loop
   window.requestAnimationFrame(newFrame)
   
-  for (const child of targetGroup.children) {
-    child.update2()
-  }
 }
 newFrame()
 
@@ -161,6 +203,7 @@ const touchCaster = new TouchCaster()
 window.addEventListener('pointerdown', (event) =>{
   const coords = pointerEventToNDCVector2(event, sizes)
   touchCaster.hitNearest(coords, camera, targetGroup.children)
+  
 })
 
 const unTouchIfBalloon = (outline) => {
@@ -175,6 +218,22 @@ eventEmitter.e.on(EVENTS.balloonFirstHit, (pLoad) => {
   unTouchIfBalloon(outlinePass)
   outlinePass.selectedObjects = [pLoad.payload]
 })
+
+eventEmitter.e.on(EVENTS.balloonPop, (pLoad) => {
+  particles.p.position.set(pLoad.payload.position.x, pLoad.payload.position.y, pLoad.payload.position.z)
+  particles.explode()
+  if (pLoad.payload === firstBalloon) {
+    firstBalloonTime = elapsedTime
+    for (let i = 0; i < 10; i++) {
+      const newX = (Math.random() * 2 - 1) * SETTINGS.spreadRadius;
+      const newZ = (Math.random() * 2 - 1) * SETTINGS.spreadRadius;
+      new TargetBalloon(new THREE.Vector3(newX, -5, newZ), targetGroup)
+    }
+  }
+  
+  score.innerText = String(Number(score.textContent) + 1).padStart(2, "0")
+})
+
 eventEmitter.e.on(EVENTS.hitMiss, () => {
   unTouchIfBalloon(outlinePass)
   outlinePass.selectedObjects = []
