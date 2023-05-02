@@ -26,6 +26,7 @@ body
     outline: none;
     touch-action: none;
 }
+
 .score {
     position: absolute;
     right: 30px;
@@ -51,11 +52,32 @@ body
     top: calc(60% - 32px);
     width: 256px;
     height: 64px;
-    background-color: #00000088;
-    color: white;
-    border: 2px solid white;
+    background-color: #fff;
+    background-image: linear-gradient(white, whitesmoke);
+    color: #000000;
+    border: none;
     border-radius: 16px;
     font-size: 32px;
     font-family: monospace;
     visibility: hidden;
+    box-shadow: rgba(17, 17, 26, 0.1) 0 1px 0, rgba(17, 17, 26, 0.1) 0 8px 24px, rgba(17, 17, 26, 0.1) 0 16px 48px;
+}
+
+.endScreen {
+    position: absolute;
+    left: calc(50% - 128px);
+    top: calc(50% - 32px);
+    width: 256px;
+    height: 64px;
+    background-color: #00000088;
+    color: white;
+    border: 2px solid white;
+    border-radius: 16px;
+    text-align: center;
+    font-size: 32px;
+    line-height: 64px;
+    font-family: monospace;
+    touch-action: none;
+    visibility: hidden;
+    user-select: none;
 }

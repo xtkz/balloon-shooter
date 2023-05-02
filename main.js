@@ -2,12 +2,9 @@ import * as THREE from 'three'
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 import bgVertex from './shaders/bg/vertex.glsl'
 import bgFragment from './shaders/bg/fragment.glsl'
-import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {pointerEventToNDCVector2} from "./utils/utils.js";
 import TouchCaster from "./utils/TouchCaster.js";
 import TargetBalloon from "./objects/TargetBalloon.js";
-import {RenderPass} from "three/examples/jsm/postprocessing/RenderPass.js";
-import {OutlinePass} from "three/addons/postprocessing/OutlinePass.js";
 import EventEmitter from "./utils/EventEmitter.js";
 import {EVENTS, SETTINGS} from "./utils/const.js";
 import Stats from "three/examples/jsm/libs/stats.module.js";
@@ -15,12 +12,17 @@ import { gsap } from 'gsap';
 import { CustomEase } from "gsap/CustomEase";
 import ExplosionParticles from "./objects/ParticleExplosion.js";
 import {zzfx} from 'zzfx'
+import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
+import Counter from "./utils/Counter.js";
 
 gsap.registerPlugin(CustomEase)
 
+let counter = new Counter();
+let firstBalloonPopped = false;
 
 const canvas = document.querySelector('canvas.webgl')
 const score = document.querySelector('div.score')
+const endScreen = document.querySelector('div.endScreen')
 const button = document.querySelector("#button-start")
 
 const stats = new Stats();
@@ -39,7 +41,7 @@ const scene = new THREE.Scene()
  */
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
 // const dirLiHelper = new THREE.DirectionalLightHelper( directionalLight, .5 );
-directionalLight.position.set (1, 3, 1)
+directionalLight.position.set (3, 8, 5)
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
 scene.add(
   directionalLight,
@@ -53,18 +55,59 @@ scene.add(
 const targetGroup = new THREE.Group();
 scene.add(targetGroup);
 
-/**
- * Test instance balloon
- */
 
+
+/**
+ * Loader
+ */
+const gltfLoader = new GLTFLoader()
+let balloonModel
+let ropeMixer
+gltfLoader.load(
+  '/models/Balloon.glb',
+  (gltf) =>
+  {
+    // console.log('gltfLoader success')
+    ropeMixer = new THREE.AnimationMixer(gltf);
+    makeFirstBalloon(gltf, ropeMixer)
+    balloonModel = gltf
+  },
+  (progress) =>
+  {
+    console.log('gltfLoader progress')
+    console.log(progress)
+  },
+  (error) =>
+  {
+    console.log('gltfLoader error')
+    console.log(error)
+  }
+)
+
+/**
+ * Making Balloons
+ */
 let firstBalloon
-const makeFirstBalloon = () => {
-  firstBalloon = new TargetBalloon(new THREE.Vector3(0, -3, 0), targetGroup)
-  firstBalloon.material.transparent = true;
-  firstBalloon.material.opacity = 0;
-  
+const makeFirstBalloon = (model, mixer) => {
+  firstBalloon = new TargetBalloon(model, mixer, new THREE.Vector3(0, -3, 0), targetGroup, 'firstBalloon')
 }
-makeFirstBalloon()
+
+const makeNextBalloon = (model, mixer) => {
+  const currentRadius = Math.sqrt(1-(Math.random()-1)**2) * SETTINGS.spreadRadius
+  const angle = 2 * Math.PI * (5/13) * counter.getBorn();
+  const newX = Math.cos(angle) * currentRadius;
+  const newZ = Math.sin(angle) * currentRadius;
+  const nextBalloon = new TargetBalloon(
+    model,
+    mixer,
+    new THREE.Vector3(
+      newX,
+      SETTINGS.lowestPoint,
+      newZ),
+    targetGroup,
+    `balloon${counter.getBorn()}`)
+  nextBalloon.appear()
+}
 
 
 /**
@@ -90,7 +133,7 @@ const bgMaterial = new THREE.ShaderMaterial({
 bgMaterial.side = THREE.BackSide;
 
 const bg = new THREE.Mesh(
-  new THREE.IcosahedronGeometry(7,3),
+  new THREE.SphereGeometry(7,16,16),
   bgMaterial
 )
 // bg.scale.set(10,10,10)
@@ -107,7 +150,7 @@ const orbitControls = new OrbitControls( camera, canvas );
 orbitControls.enablePan = false;
 orbitControls.enableZoom = false;
 orbitControls.update();
-orbitControls.enabled = false;
+// orbitControls.enabled = false;
 scene.add(camera)
 
 
@@ -121,60 +164,47 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
 // renderer.setClearAlpha(0.0);
-// renderer.render(scene, camera)
-
-/**
- * postProcessing
- */
-const effectComposer = new EffectComposer(renderer);
-effectComposer.setSize(sizes.width, sizes.height);
-effectComposer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
-
-const renderPass = new RenderPass(scene, camera);
-effectComposer.addPass(renderPass);
-
-const outlinePass = new OutlinePass( new THREE.Vector2(sizes.width, sizes.height), scene, camera );
-
-// Outline settings
-outlinePass.edgeThickness = 15;
-outlinePass.edgeGlow = 5;
-outlinePass.edgeStrength = 2;
-outlinePass.visibleEdgeColor.set('#ffffff');
-outlinePass.hiddenEdgeColor.set('#190a05');
-
-outlinePass.selectedObjects = []
-
-effectComposer.addPass(outlinePass);
+renderer.render(scene, camera)
 
 /**
  * Frame redraw loop
  */
-const clock = new THREE.Clock()
-let elapsedTime = 0;
-let firstBalloonTime = 0;
+// const clock = new THREE.Clock();
+let time = Date.now();
+
+let period = 2000;
+let periodCollector = 0;
 
 const newFrame = () => {
   stats.begin();
   
   //Time calculation
-  elapsedTime = clock.getElapsedTime()
+  const currentTime = Date.now()
+  const deltaTime = currentTime - time
+  time = currentTime
+  // console.log(`§ deltaTime ${deltaTime}`)
   
   orbitControls.update();
   
-  // Re-Render frame
-  effectComposer.render(scene, camera)
+  if (firstBalloonPopped && counter.getBorn() < SETTINGS.totalBalloons) {
+    periodCollector += deltaTime;
+  }
   
-  for (const child of targetGroup.children) {
-    if (child !== firstBalloon) {
-      child.update2(elapsedTime - firstBalloonTime)
-    // } else {
-    //   if (child.position.y < -0.001) {
-    //     child.position.y = (Math.sin(elapsedTime) - 1) * 3
-    //   } else {
-    //     child.position.y = 0
-    //   }
+  if (periodCollector > period) {
+    makeNextBalloon(balloonModel, ropeMixer)
+    periodCollector = 0;
+    if (period > 150) {
+      period = period / 1.05
     }
   }
+  
+  // Re-Render frame
+  renderer.render(scene, camera)
+  
+  // Updating balloon rope mixer
+  ropeMixer && ropeMixer.update(deltaTime/1000)
+  
+  
   stats.end();
   // Make it loop
   window.requestAnimationFrame(newFrame)
@@ -212,12 +242,6 @@ window.addEventListener('pointerdown', (event) =>{
   
 })
 
-const unTouchIfBalloon = (outline) => {
-  const previous = outline.selectedObjects[0]
-  if (previous instanceof TargetBalloon) {
-    previous.unTouch()
-  }
-}
 
 
 window.onload = function() {
@@ -232,42 +256,44 @@ button.onclick = () => {eventEmitter.e.emit(EVENTS.gameStart, {value: 'start'})}
 const eventEmitter = new EventEmitter()
 
 eventEmitter.e.on(EVENTS.gameStart, () => {
-  gsap.fromTo(firstBalloon.position,
-    { x:0,y:-3,z:0 },
-    { x: 0, y: 0, z: 0,
-      duration: 3,
-      // delay: 1,
-      ease: CustomEase.create("custom", "M0,0 C0.02,0.4 0.184,1.152 0.288,1.152 0.438,1.152 0.348,1 1,1 ")}
-  )
-  gsap.to(firstBalloon.material, {opacity: 1, duration: 1})
+  firstBalloon.appear();
   button.style.display = 'none';
   score.style.visibility = "visible";
   
 })
 
-eventEmitter.e.on(EVENTS.balloonFirstHit, (pLoad) => {
-  unTouchIfBalloon(outlinePass)
-  outlinePass.selectedObjects = [pLoad.payload]
-  zzfx(...[0,.2,500,.03,.04,.3,0,2,0,0,567,.02,0,0,0,0,0,1.2,0,.5]); // Loaded Sound 42
+eventEmitter.e.on(EVENTS.balloonFirstHit, () => {
+  zzfx(...[1,.2,500,.03,.04,.3,0,2,0,0,567,.02,0,0,0,0,0,1.2,0,.5]); // Loaded Sound 42
 })
 
 eventEmitter.e.on(EVENTS.balloonPop, (pLoad) => {
   particles.p.position.set(pLoad.payload.position.x, pLoad.payload.position.y, pLoad.payload.position.z)
   particles.explode()
-  zzfx(...[0,.2,440,0,.02,.5,4,1.15,-1,0,-100,.15,0,.7,0,.1]); // Loaded Sound 41
+  zzfx(...[1,.2,440,0,.02,.5,4,1.15,-1,0,-100,.15,0,.7,0,.1]); // Loaded Sound 41
   if (pLoad.payload === firstBalloon) {
-    firstBalloonTime = elapsedTime
-    for (let i = 0; i < 10; i++) {
-      const newX = (Math.random() * 2 - 1) * SETTINGS.spreadRadius;
-      const newZ = (Math.random() * 2 - 1) * SETTINGS.spreadRadius;
-      new TargetBalloon(new THREE.Vector3(newX, -5, newZ), targetGroup)
-    }
+    makeNextBalloon(balloonModel, ropeMixer);
+    firstBalloonPopped = true;
+    // for (let i = 0; i < 10; i++) {
+    //   const newX = (Math.random() * 2 - 1) * SETTINGS.spreadRadius;
+    //   const newZ = (Math.random() * 2 - 1) * SETTINGS.spreadRadius;
+    //   const newBalloon = new TargetBalloon(balloonModel, ropeMixer, new THREE.Vector3(newX, SETTINGS.lowestPoint, newZ), targetGroup, `balloon${i}`)
+    //   newBalloon.appear();
+    //   totalBalloonCounter++;
+    // }
   }
   
   score.innerText = String(Number(score.textContent) + 1).padStart(2, "0")
 })
 
 eventEmitter.e.on(EVENTS.hitMiss, () => {
-  unTouchIfBalloon(outlinePass)
-  outlinePass.selectedObjects = []
+
+})
+
+eventEmitter.e.on(EVENTS.gameEnd, () => {
+  score.style.visibility = "hidden";
+  console.log(score.innerText)
+  endScreen.innerText = String(`${score.innerHTML} / ${counter.getBorn()}`)
+  endScreen.style.visibility = "visible";
+  // button.style.display = 'block';
+  // button.style.visibility = "visible";
 })

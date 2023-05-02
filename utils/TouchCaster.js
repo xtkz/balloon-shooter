@@ -11,7 +11,7 @@ export default class TouchCaster {
     
     const intersects = this.raycaster.intersectObjects(objArray)
     if (intersects.length > 0) {
-      intersects[0].object.getHit()
+      intersects[0].object.parent.getHit()
     } else {
       this.eventEmitter.e.emit(EVENTS.hitMiss, {payload: null})
     }
