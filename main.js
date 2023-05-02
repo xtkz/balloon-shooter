@@ -64,7 +64,7 @@ const gltfLoader = new GLTFLoader()
 let balloonModel
 let ropeMixer
 gltfLoader.load(
-  '/models/Balloon.glb',
+  './models/Balloon.glb',
   (gltf) =>
   {
     // console.log('gltfLoader success')
