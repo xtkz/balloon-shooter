@@ -10,10 +10,14 @@ export const EVENTS = {
 
 export const SETTINGS = {
   balloonScale: 0.4,
-  floatSpeed: 0.02,
-  spreadRadius: 3,
+  minFloatDuration: 3,
+  maxFloatDuration: 10,
+  maxPeriodMillis: 3000,
+  minPeriodMillis: 150,
+  periodSpedUpCoefficient: 1.1,
+  spreadRadius: 2,
   particleScale: 0.1,
   lowestPoint: -5,
-  highestPoint: 4.5,
-  totalBalloons: 10,
+  highestPoint: 5,
+  totalBalloons: 30,
 }

@@ -10,9 +10,10 @@ gsap.registerPlugin(CustomEase)
 
 export default class ExplosionParticles {
   constructor() {
-    const particlesGeometry = new THREE.IcosahedronGeometry(1, 8
-    )
-  // Material
+    // Geometry
+    const particlesGeometry = new THREE.IcosahedronGeometry(1, 8)
+    
+    // Material
     const particlesMaterial = new THREE.PointsMaterial({
       size: 0.04,
       sizeAttenuation: true,
@@ -20,6 +21,8 @@ export default class ExplosionParticles {
     particlesMaterial.color = new THREE.Color('#b73720')
     particlesMaterial.transparent = true;
     particlesMaterial.opacity = 0
+    
+    // Modifying Shader
     particlesMaterial.onBeforeCompile = (shader) =>
     {
       shader.vertexShader = shader.vertexShader.replace(
@@ -36,19 +39,22 @@ export default class ExplosionParticles {
       )
     }
     
+    // assemble and setup
     const particles = new THREE.Points(particlesGeometry, particlesMaterial);
-    particles.rotation.set(0.1,0.1,0.1)
+    // hide it far away
     particles.position.set(100,100,100)
     
     particles.scale.set(SETTINGS.particleScale, SETTINGS.particleScale, SETTINGS.particleScale)
     
     this.p = particles
     
+    // Setup animation scale
     this.scaleAinm = gsap.fromTo(this.p.scale,
       {x: SETTINGS.particleScale, y: SETTINGS.particleScale, z: SETTINGS.particleScale,},
       { duration: 0.94, x:1,y:1,z:1, ease: 'expo.out'}
     )
     
+    // Setup animation opacity
     this.opacityAnim = gsap.fromTo(this.p.material,
       {opacity: 1},
       {
@@ -60,6 +66,8 @@ export default class ExplosionParticles {
         }
       }
     )
+    
+    // Animation prepare to play
     this.scaleAinm.pause(0)
     this.opacityAnim.pause(0)
   }
@@ -67,6 +75,11 @@ export default class ExplosionParticles {
   
   
   explode() {
+    this.p.rotation.set(
+      Math.random() * Math.PI,
+      Math.random() * Math.PI,
+      Math.random() * Math.PI,
+    )
     this.scaleAinm.restart()
     this.opacityAnim.restart()
   }

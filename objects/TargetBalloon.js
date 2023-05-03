@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import EventEmitter from "../utils/EventEmitter.js";
 import {EVENTS, SETTINGS} from "../utils/const.js";
@@ -5,9 +6,12 @@ import GameObject from "./GameObject.js";
 import {gsap} from "gsap";
 import { CustomEase } from "gsap/CustomEase";
 import Counter from "../utils/Counter.js";
+import {useMode, modeLch, modeRgb, serializeHex} from 'culori/fn';
 
 
 gsap.registerPlugin(CustomEase)
+const rgb = useMode(modeRgb);
+const lch = useMode(modeLch);
 
 export default class TargetBalloon extends GameObject {
   constructor( model, mixer, vector3, targetGroup, name ) {
@@ -22,20 +26,10 @@ export default class TargetBalloon extends GameObject {
     this.counter = new Counter()
     
     this.personalRandom = Math.sqrt(1-(Math.random()-1)**2)
+    this.floatDuration = THREE.MathUtils.lerp(SETTINGS.minFloatDuration, SETTINGS.maxFloatDuration, this.personalRandom)
     
-    // this.ballonObj = model.scene.children[0].clone()
-    // this.ropeObj = model.scene.children[1].clone()
+    this.personalColor = serializeHex(rgb(lch(`lch(70% 45.4 ${360 * Math.random()})`)))
     
-    // model.scene.traverse((child) => {
-    //   if (child.name === 'Ball') {
-    //     this.ballonObj = child.clone();
-    //   }
-    //   if (child.name === 'Armature') {
-    //     this.ropeObj = child.clone();
-    //     console.log(this.name)
-    //     console.log(this.ropeObj)
-    //   }
-    // })
     this.add(
       this.model.children[0],
       this.model.children[1],
@@ -43,6 +37,7 @@ export default class TargetBalloon extends GameObject {
     this.children[0].material = this.children[0].material.clone()
     this.children[0].material.transparent = true;
     this.children[0].material.opacity = 0;
+    this.children[0].material.color.set(new THREE.Color(this.personalColor))
     this.children[0].material.emissive.set( 0x000000 )
     
     this.position.set(vector3.x, vector3.y, vector3.z);
@@ -92,6 +87,10 @@ export default class TargetBalloon extends GameObject {
   }
   firstHit() {
     this.children[0].material.emissive.set( 0xaaaaaa )
+    gsap.fromTo(this.children[0].material, {emissiveIntensity: 1},{emissiveIntensity: 0, duration: 1, ease: 'power4.in', onComplete: () => {
+      this.resetTouches();
+        this.children[0].material.emissive.set( 0x000000 );
+      }})
     this.eventEmitter.e.emit(EVENTS.balloonFirstHit, {payload: this})
     
   }
@@ -117,7 +116,7 @@ export default class TargetBalloon extends GameObject {
       )
       gsap.to(this.children[0].material, {opacity: 1, duration: 1, delay: 0.4})
     } else {
-      this.mainGSAP = gsap.to(this.position, {y: SETTINGS.highestPoint, duration: 2+15*this.personalRandom, onComplete: () => {
+      this.mainGSAP = gsap.to(this.position, {y: SETTINGS.highestPoint, duration: this.floatDuration, onComplete: () => {
         this.destruct()
         }})
       gsap.to(this.children[0].material, {opacity: 1, duration: 0.3})

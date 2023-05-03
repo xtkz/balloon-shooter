@@ -20,41 +20,50 @@ gsap.registerPlugin(CustomEase)
 let counter = new Counter();
 let firstBalloonPopped = false;
 
+// DOM acquisition
 const canvas = document.querySelector('canvas.webgl')
+const button = document.querySelector("#button-start")
 const score = document.querySelector('div.score')
 const endScreen = document.querySelector('div.endScreen')
-const button = document.querySelector("#button-start")
 
+// FPS counter
 const stats = new Stats();
 document.body.appendChild( stats.dom );
 
+// Initial window Sizes
 const sizes = {
   width: window.innerWidth,
   height: window.innerHeight,
 }
 
+// Creating a scene
 const scene = new THREE.Scene()
 // scene.add(new THREE.AxesHelper(3))
+
 
 /**
  * Lights
  */
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
-// const dirLiHelper = new THREE.DirectionalLightHelper( directionalLight, .5 );
-directionalLight.position.set (3, 8, 5)
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+directionalLight.position.set (3, 8, 3)
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+
+const hemisphereLight = new THREE.HemisphereLight( 0x000000, 0xffffff, 0.3 );
+
 scene.add(
   directionalLight,
   // dirLiHelper,
   ambientLight,
+  hemisphereLight,
 )
+
 
 /**
  * Target group
  */
 const targetGroup = new THREE.Group();
 scene.add(targetGroup);
-
 
 
 /**
@@ -113,9 +122,8 @@ const makeNextBalloon = (model, mixer) => {
 /**
  * Particles
  */
-const particles = new ExplosionParticles()
-
-scene.add(particles.p)
+const particles = new ExplosionParticles();
+scene.add(particles.p);
 
 
 /**
@@ -128,30 +136,35 @@ const bgMaterial = new THREE.ShaderMaterial({
     uTopColor: {value: new THREE.Color('#2683ec')},
     uBottomColor: {value: new THREE.Color('#ffffff')},
   }
-}
-);
+});
 bgMaterial.side = THREE.BackSide;
 
 const bg = new THREE.Mesh(
   new THREE.SphereGeometry(7,16,16),
   bgMaterial
 )
-// bg.scale.set(10,10,10)
-scene.add(bg)
+scene.add(bg);
 
 /**
  * Camera
  * @type {PerspectiveCamera}
  */
-
-const camera = new THREE.PerspectiveCamera(75,sizes.width/sizes.height,0.01,20)
-camera.position.set(0,0,4)
+const camera = new THREE.PerspectiveCamera(45,sizes.width/sizes.height,0.01,20)
+camera.position.set(0,0,7.9);
+// Orbit control settings (for dragging around)
 const orbitControls = new OrbitControls( camera, canvas );
+orbitControls.enableDamping = true;
+orbitControls.dampingFactor = 0.1;
 orbitControls.enablePan = false;
 orbitControls.enableZoom = false;
+orbitControls.maxAzimuthAngle = Math.PI/2;
+orbitControls.minAzimuthAngle = -Math.PI/2;
+orbitControls.maxPolarAngle = Math.PI * 3/4;
+orbitControls.minPolarAngle = Math.PI * 1/4;
 orbitControls.update();
 // orbitControls.enabled = false;
-scene.add(camera)
+
+scene.add(camera);
 
 
 /**
@@ -164,7 +177,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(sizes.width, sizes.height);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 3));
 // renderer.setClearAlpha(0.0);
-renderer.render(scene, camera)
+renderer.render(scene, camera);
 
 /**
  * Frame redraw loop
@@ -172,7 +185,7 @@ renderer.render(scene, camera)
 // const clock = new THREE.Clock();
 let time = Date.now();
 
-let period = 2000;
+let period = SETTINGS.maxPeriodMillis;
 let periodCollector = 0;
 
 const newFrame = () => {
@@ -182,7 +195,6 @@ const newFrame = () => {
   const currentTime = Date.now()
   const deltaTime = currentTime - time
   time = currentTime
-  // console.log(`§ deltaTime ${deltaTime}`)
   
   orbitControls.update();
   
@@ -193,8 +205,8 @@ const newFrame = () => {
   if (periodCollector > period) {
     makeNextBalloon(balloonModel, ropeMixer)
     periodCollector = 0;
-    if (period > 150) {
-      period = period / 1.05
+    if (period > SETTINGS.minPeriodMillis) {
+      period = period / SETTINGS.periodSpedUpCoefficient
     }
   }
   
@@ -204,8 +216,8 @@ const newFrame = () => {
   // Updating balloon rope mixer
   ropeMixer && ropeMixer.update(deltaTime/1000)
   
-  
   stats.end();
+  
   // Make it loop
   window.requestAnimationFrame(newFrame)
   
@@ -243,7 +255,6 @@ window.addEventListener('pointerdown', (event) =>{
 })
 
 
-
 window.onload = function() {
   button.style.visibility = "visible";
 }
@@ -273,27 +284,18 @@ eventEmitter.e.on(EVENTS.balloonPop, (pLoad) => {
   if (pLoad.payload === firstBalloon) {
     makeNextBalloon(balloonModel, ropeMixer);
     firstBalloonPopped = true;
-    // for (let i = 0; i < 10; i++) {
-    //   const newX = (Math.random() * 2 - 1) * SETTINGS.spreadRadius;
-    //   const newZ = (Math.random() * 2 - 1) * SETTINGS.spreadRadius;
-    //   const newBalloon = new TargetBalloon(balloonModel, ropeMixer, new THREE.Vector3(newX, SETTINGS.lowestPoint, newZ), targetGroup, `balloon${i}`)
-    //   newBalloon.appear();
-    //   totalBalloonCounter++;
-    // }
   }
   
   score.innerText = String(Number(score.textContent) + 1).padStart(2, "0")
 })
 
-eventEmitter.e.on(EVENTS.hitMiss, () => {
-
-})
+// eventEmitter.e.on(EVENTS.hitMiss, () => {
+//
+// })
 
 eventEmitter.e.on(EVENTS.gameEnd, () => {
   score.style.visibility = "hidden";
   console.log(score.innerText)
   endScreen.innerText = String(`${score.innerHTML} / ${counter.getBorn()}`)
   endScreen.style.visibility = "visible";
-  // button.style.display = 'block';
-  // button.style.visibility = "visible";
 })

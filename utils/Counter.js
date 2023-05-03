@@ -22,7 +22,6 @@ export default class Counter {
   
   newDeath() {
     this.deathCounter++
-    console.log(`§ this.deathCounter ${this.deathCounter}`)
     if (this.bornCounter === SETTINGS.totalBalloons && this.deathCounter === SETTINGS.totalBalloons) {
       this.eventEmitter.e.emit(EVENTS.gameEnd)
     }
