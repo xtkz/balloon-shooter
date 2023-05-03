@@ -12,6 +12,7 @@ import {useMode, modeLch, modeRgb, serializeHex} from 'culori/fn';
 gsap.registerPlugin(CustomEase)
 const rgb = useMode(modeRgb);
 const lch = useMode(modeLch);
+let colorAngle
 
 export default class TargetBalloon extends GameObject {
   constructor( model, mixer, vector3, targetGroup, name ) {
@@ -27,8 +28,9 @@ export default class TargetBalloon extends GameObject {
     
     this.personalRandom = Math.sqrt(1-(Math.random()-1)**2)
     this.floatDuration = THREE.MathUtils.lerp(SETTINGS.minFloatDuration, SETTINGS.maxFloatDuration, this.personalRandom)
-    
-    this.personalColor = serializeHex(rgb(lch(`lch(70% 45.4 ${360 * Math.random()})`)))
+    colorAngle = Math.round(((this.counter.getBorn()+1.5) * 3/13 * 240) % 240 + 300) % 360;
+    console.log(`§ colorAngle ${colorAngle}`)
+    this.personalColor = serializeHex(rgb(lch(`lch(61% 49 ${colorAngle})`)))
     
     this.add(
       this.model.children[0],
