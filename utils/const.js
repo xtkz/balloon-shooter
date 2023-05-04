@@ -1,7 +1,6 @@
 export const EVENTS = {
   gameStart: 'gameStart',
   balloonFirstHit: 'balloonFirstHit',
-  hitMiss: 'hitMiss',
   balloonPop: 'balloonPop',
   
   gameEnd: 'gameEnd',
@@ -10,8 +9,8 @@ export const EVENTS = {
 
 export const SETTINGS = {
   balloonScale: 0.4,
-  minFloatDuration: 3,
-  maxFloatDuration: 10,
+  minFloatDuration: 5,
+  maxFloatDuration: 15,
   maxPeriodMillis: 3000,
   minPeriodMillis: 150,
   periodSpedUpCoefficient: 1.1,

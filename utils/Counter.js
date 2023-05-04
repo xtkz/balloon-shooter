@@ -17,7 +17,6 @@ export default class Counter {
   
   newBorn() {
     this.bornCounter++
-    console.log(`§ this.bornCounter ${this.bornCounter}`)
   }
   
   newDeath() {
@@ -27,10 +26,10 @@ export default class Counter {
     }
   }
   
-  getBorn() {
+  get born() {
     return this.bornCounter
   }
-  getDeath() {
+  get deaths() {
     return this.deathCounter
   }
 }

@@ -46,10 +46,24 @@ body
     user-select: none;
 }
 
-#button-start {
+.startScreen{
     position: absolute;
     left: calc(50% - 128px);
-    top: calc(60% - 32px);
+    top: calc(55% - 128px);
+    width: 256px;
+    text-align: center;
+    font-size: 48px;
+    font-family: monospace;
+    visibility: hidden;
+}
+
+.startScreen > a {
+    font-size: 14px;
+}
+
+#button-start {
+    position: relative;
+    margin-top: 32px;
     width: 256px;
     height: 64px;
     background-color: #fff;
@@ -59,23 +73,26 @@ body
     border-radius: 16px;
     font-size: 32px;
     font-family: monospace;
-    visibility: hidden;
+
     box-shadow: rgba(17, 17, 26, 0.1) 0 1px 0, rgba(17, 17, 26, 0.1) 0 8px 24px, rgba(17, 17, 26, 0.1) 0 16px 48px;
 }
 
 .endScreen {
     position: absolute;
     left: calc(50% - 128px);
-    top: calc(50% - 32px);
+    top: calc(50% - 64px);
     width: 256px;
-    height: 64px;
+    height: 128px;
     background-color: #00000088;
     color: white;
     border: 2px solid white;
     border-radius: 16px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     text-align: center;
     font-size: 32px;
-    line-height: 64px;
+    line-height: 48px;
     font-family: monospace;
     touch-action: none;
     visibility: hidden;

@@ -14,6 +14,7 @@ import ExplosionParticles from "./objects/ParticleExplosion.js";
 import {zzfx} from 'zzfx'
 import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
 import Counter from "./utils/Counter.js";
+import Cloud from "./objects/Cloud.js";
 
 gsap.registerPlugin(CustomEase)
 
@@ -22,6 +23,7 @@ let firstBalloonPopped = false;
 
 // DOM acquisition
 const canvas = document.querySelector('canvas.webgl')
+const startScreen = document.querySelector('div.startScreen')
 const button = document.querySelector("#button-start")
 const score = document.querySelector('div.score')
 const endScreen = document.querySelector('div.endScreen')
@@ -53,45 +55,64 @@ const hemisphereLight = new THREE.HemisphereLight( 0x000000, 0xffffff, 0.3 );
 
 scene.add(
   directionalLight,
-  // dirLiHelper,
   ambientLight,
   hemisphereLight,
 )
 
 
 /**
- * Target group
+ * Target & cloud groups
  */
 const targetGroup = new THREE.Group();
-scene.add(targetGroup);
+const cloudsGroup = new THREE.Group();
+scene.add(
+  targetGroup,
+  cloudsGroup,
+  );
 
 
 /**
  * Loader
  */
-const gltfLoader = new GLTFLoader()
-let balloonModel
-let ropeMixer
+const loadingManager = new THREE.LoadingManager(
+  // Loaded
+  () => {
+    console.log('loaded')
+  },
+  
+  // Progress
+  () => {  }
+)
+
+const gltfLoader = new GLTFLoader(loadingManager)
+
+let balloonModel, cloudModel, ropeMixer;
+
 gltfLoader.load(
   './models/Balloon.glb',
-  (gltf) =>
-  {
+  (gltf) => {
     // console.log('gltfLoader success')
     ropeMixer = new THREE.AnimationMixer(gltf);
-    makeFirstBalloon(gltf, ropeMixer)
-    balloonModel = gltf
+    makeFirstBalloon(gltf, ropeMixer);
+    balloonModel = gltf;
   },
-  (progress) =>
-  {
-    console.log('gltfLoader progress')
-    console.log(progress)
-  },
-  (error) =>
-  {
-    console.log('gltfLoader error')
+  () => {  },
+  (error) => {
+    console.log('gltfLoader Balloon error')
     console.log(error)
   }
-)
+);
+gltfLoader.load(
+  './models/Cloud.glb',
+  (gltf) => {
+    cloudModel = gltf.scene.children[0]
+  },
+  () => {  },
+  (error) => {
+    console.log('gltfLoader Balloon error')
+    console.log(error)
+  }
+);
 
 /**
  * Making Balloons
@@ -103,7 +124,7 @@ const makeFirstBalloon = (model, mixer) => {
 
 const makeNextBalloon = (model, mixer) => {
   const currentRadius = Math.sqrt(1-(Math.random()-1)**2) * SETTINGS.spreadRadius
-  const angle = 2 * Math.PI * (5/13) * counter.getBorn();
+  const angle = 2 * Math.PI * (5/13) * counter.born;
   const newX = Math.cos(angle) * currentRadius;
   const newZ = Math.sin(angle) * currentRadius;
   const nextBalloon = new TargetBalloon(
@@ -114,13 +135,20 @@ const makeNextBalloon = (model, mixer) => {
       SETTINGS.lowestPoint,
       newZ),
     targetGroup,
-    `balloon${counter.getBorn()}`)
+    `balloon${counter.born}`)
   nextBalloon.appear()
 }
 
+/**
+ * Making clouds
+ */
+const makeCloud = (model) => {
+  const cloud = new Cloud(model, cloudsGroup)
+  cloud.appear()
+}
 
 /**
- * Particles
+ * Making particles
  */
 const particles = new ExplosionParticles();
 scene.add(particles.p);
@@ -151,14 +179,15 @@ scene.add(bg);
  */
 const camera = new THREE.PerspectiveCamera(45,sizes.width/sizes.height,0.01,20)
 camera.position.set(0,0,7.9);
+
 // Orbit control settings (for dragging around)
 const orbitControls = new OrbitControls( camera, canvas );
 orbitControls.enableDamping = true;
 orbitControls.dampingFactor = 0.1;
 orbitControls.enablePan = false;
 orbitControls.enableZoom = false;
-orbitControls.maxAzimuthAngle = Math.PI/2;
-orbitControls.minAzimuthAngle = -Math.PI/2;
+orbitControls.maxAzimuthAngle = Math.PI/3;
+orbitControls.minAzimuthAngle = -Math.PI/3;
 orbitControls.maxPolarAngle = Math.PI * 3/4;
 orbitControls.minPolarAngle = Math.PI * 1/4;
 orbitControls.update();
@@ -182,7 +211,6 @@ renderer.render(scene, camera);
 /**
  * Frame redraw loop
  */
-// const clock = new THREE.Clock();
 let time = Date.now();
 
 let period = SETTINGS.maxPeriodMillis;
@@ -198,7 +226,7 @@ const newFrame = () => {
   
   orbitControls.update();
   
-  if (firstBalloonPopped && counter.getBorn() < SETTINGS.totalBalloons) {
+  if (firstBalloonPopped && counter.born < SETTINGS.totalBalloons) {
     periodCollector += deltaTime;
   }
   
@@ -250,13 +278,13 @@ const touchCaster = new TouchCaster();
 
 window.addEventListener('pointerdown', (event) =>{
   const coords = pointerEventToNDCVector2(event, sizes)
-  touchCaster.hitNearest(coords, camera, targetGroup.children)
+  touchCaster.hitNearest(coords, camera, [...targetGroup.children, ...cloudsGroup.children])
   
 })
 
 
 window.onload = function() {
-  button.style.visibility = "visible";
+  startScreen.style.visibility = "visible";
 }
 button.onclick = () => {eventEmitter.e.emit(EVENTS.gameStart, {value: 'start'})}
 
@@ -268,7 +296,7 @@ const eventEmitter = new EventEmitter()
 
 eventEmitter.e.on(EVENTS.gameStart, () => {
   firstBalloon.appear();
-  button.style.display = 'none';
+  startScreen.style.display = 'none';
   score.style.visibility = "visible";
   
 })
@@ -285,17 +313,14 @@ eventEmitter.e.on(EVENTS.balloonPop, (pLoad) => {
     makeNextBalloon(balloonModel, ropeMixer);
     firstBalloonPopped = true;
   }
-  
+  makeCloud(cloudModel)
   score.innerText = String(Number(score.textContent) + 1).padStart(2, "0")
+  
+  console.log(cloudsGroup.children)
 })
-
-// eventEmitter.e.on(EVENTS.hitMiss, () => {
-//
-// })
 
 eventEmitter.e.on(EVENTS.gameEnd, () => {
   score.style.visibility = "hidden";
-  console.log(score.innerText)
-  endScreen.innerText = String(`${score.innerHTML} / ${counter.getBorn()}`)
+  endScreen.innerHTML = String(`game over <br>${score.innerHTML} / ${counter.born}`)
   endScreen.style.visibility = "visible";
 })
