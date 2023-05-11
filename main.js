@@ -7,7 +7,7 @@ import TouchCaster from "./utils/TouchCaster.js";
 import TargetBalloon from "./objects/TargetBalloon.js";
 import EventEmitter from "./utils/EventEmitter.js";
 import {EVENTS, SETTINGS} from "./utils/const.js";
-import Stats from "three/examples/jsm/libs/stats.module.js";
+// import Stats from "three/examples/jsm/libs/stats.module.js";
 import { gsap } from 'gsap';
 import { CustomEase } from "gsap/CustomEase";
 import ExplosionParticles from "./objects/ParticleExplosion.js";
@@ -29,8 +29,8 @@ const score = document.querySelector('div.score')
 const endScreen = document.querySelector('div.endScreen')
 
 // FPS counter
-const stats = new Stats();
-document.body.appendChild( stats.dom );
+// const stats = new Stats();
+// document.body.appendChild( stats.dom );
 
 // Initial window Sizes
 const sizes = {
@@ -217,7 +217,7 @@ let period = SETTINGS.maxPeriodMillis;
 let periodCollector = 0;
 
 const newFrame = () => {
-  stats.begin();
+  // stats.begin();
   
   //Time calculation
   const currentTime = Date.now()
@@ -244,7 +244,7 @@ const newFrame = () => {
   // Updating balloon rope mixer
   ropeMixer && ropeMixer.update(deltaTime/1000)
   
-  stats.end();
+  // stats.end();
   
   // Make it loop
   window.requestAnimationFrame(newFrame)
@@ -271,7 +271,7 @@ window.addEventListener('resize', () => {
 })
 
 /**
- * Raycast on pointer event
+ * RayCast on pointer event
  * @type {TouchCaster}
  */
 const touchCaster = new TouchCaster();

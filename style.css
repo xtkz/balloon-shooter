@@ -49,12 +49,26 @@ body
 .startScreen{
     position: absolute;
     left: calc(50% - 128px);
-    top: calc(55% - 128px);
+    top: calc(50% - 384px);
+    height: 512px;
     width: 256px;
     text-align: center;
     font-size: 48px;
     font-family: monospace;
     visibility: hidden;
+}
+
+.startScreen > svg {
+    position: relative;
+    top: 32px;
+    transform-origin: 114px 114px;
+    transform: translateX(-13px);
+}
+
+.startScreen > span {
+    display: inline-block;
+    height: 100px;
+    margin-top: -32px;
 }
 
 .startScreen > a {

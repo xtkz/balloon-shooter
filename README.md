@@ -11,6 +11,6 @@ Demo: [xtkz.github.io/balloon-shooter](https://xtkz.github.io/balloon-shooter/)
 
 🔈 Sound from zzfx.
 
-🎈 Double tap to pop ;)
+🎈 SVG tutor created by bare hands.
 
 Write me: [t.me/polnodobra]()
